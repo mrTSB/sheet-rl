@@ -40,13 +40,66 @@ def show_sheet_list(sheets):
     state.clear()
     ltk.find("#main").empty()
 
-    def create_card(uid, index, runtime, *items):
+    def delete_sheet(uid, name):
+        """Deletes a sheet after user confirmation."""
+        def do_delete(event):
+            event.stopPropagation()
+            
+            def confirm_delete(event=None):
+                ltk.find("#delete-confirm-modal").remove()
+                def on_success(event=None):
+                    state.show_message(f"Sheet '{name}' deleted successfully.")
+                    storage.list_sheets(show_sheet_list)
+                
+                def on_error(event=None):
+                    show_error_toast(f"Failed to delete sheet '{name}'.")
+                
+                storage.delete(uid, ltk.proxy(on_success), ltk.proxy(on_error))
+            
+            def cancel_delete(event=None):
+                ltk.find("#delete-confirm-modal").remove()
+            
+            # Create custom confirmation modal
+            modal = ltk.Div(
+                ltk.Div(
+                    ltk.Div(
+                        ltk.Text("🗑️").addClass("confirm-icon"),
+                        ltk.Text("Delete Sheet").addClass("confirm-title"),
+                        ltk.Text(f"Are you sure you want to delete \"{name}\"?").addClass("confirm-message"),
+                        ltk.Text("This action cannot be undone.").addClass("confirm-warning"),
+                        ltk.HBox(
+                            ltk.Button("Cancel", ltk.proxy(cancel_delete)).addClass("confirm-btn confirm-btn-cancel"),
+                            ltk.Button("Delete", ltk.proxy(confirm_delete)).addClass("confirm-btn confirm-btn-delete"),
+                        ).addClass("confirm-buttons"),
+                    ).addClass("confirm-content")
+                ).addClass("confirm-dialog")
+            ).attr("id", "delete-confirm-modal").addClass("confirm-modal")
+            
+            ltk.find("body").append(modal)
+            
+        return do_delete
+    
+    def show_error_toast(message):
+        """Shows an error toast notification."""
+        toast = ltk.Div(
+            ltk.Text(message)
+        ).addClass("error-toast")
+        ltk.find("body").append(toast)
+        ltk.schedule(lambda: toast.remove(), "remove-toast", 3)
+
+    def create_card(uid, name, index, runtime, *items):
         def select_doc(event):
             if event.keyCode == 13:
                 load_sheet(uid, runtime)
 
+        delete_button = (
+            ltk.Button("🗑️", ltk.proxy(delete_sheet(uid, name)))
+                .addClass("delete-sheet-button")
+                .attr("title", "Delete this sheet")
+        )
+
         return (
-            ltk.Card(*items)
+            ltk.Card(*items, delete_button)
                 .on("click", ltk.proxy(lambda event=None: load_sheet(uid, runtime)))
                 .on("keydown", ltk.proxy(select_doc))
                 .attr("tabindex", 1000 + index)
@@ -58,6 +111,7 @@ def show_sheet_list(sheets):
             *[
                 create_card(
                     sheet.uid,
+                    sheet.name,
                     index,
                     "mpy",
                     "",
@@ -76,7 +130,7 @@ def show_sheet_list(sheets):
         ).css("overflow", "auto").css("height", "100%")
     )
     ltk.find(".document-card").eq(0).focus()
-    state.show_message("Select a sheet below or create a new one...")
+    # state.show_message("Welcome to SheetRL. Select a sheet or create a new one.")
 
 
 def load_sheet(uid, runtime):

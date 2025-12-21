@@ -932,66 +932,64 @@ class SpreadsheetView():     # pylint: disable=too-many-instance-attributes,too-
 
         ltk.schedule(self.editor.refresh, "refresh editor", 3)
 
+        # Hidden console for logging (not visible but functional)
         console = ltk.VBox(
-            ltk.HBox(
-                ltk.Input("")
-                    .addClass("console-filter")
-                    .attr("placeholder", "Filter the console..."),
-                ltk.Button("clear", ltk.proxy(lambda event: state.console.clear()))
-                    .addClass("console-clear")
-                    .attr("title", "Clear the console")
-            ),
             ltk.Div(ltk.Table()).addClass("console"),
-        ).addClass("console-container internals").attr("name", "Console")
+        ).addClass("console-container internals hidden").attr("name", "Console")
 
-        tabs = ltk.Tabs(
-            console,
-            ltk.Table().addClass("timeline-container").attr("name", "Timeline"),
-        ).addClass("internals")
-
-        ai = ltk.VBox(
+        # RL Task Panel - Current Task Section
+        task_section = ltk.VBox(
+            ltk.Text("Current Task").addClass("rl-section-title"),
+            ltk.TextArea()
+                .attr("id", "rl-task-input")
+                .attr("placeholder", "Describe the task you want the agent to perform...")
+                .addClass("rl-task-input"),
             ltk.HBox(
-                ltk.Text().text("LLM Prompt")
-                    .css("margin-right", 8),
-                ltk.Button("🎤", ltk.proxy(lambda event: self.record(event))) # pylint: disable=unnecessary-lambda
-                    .addClass("small-button record")
-                    .attr("title", "Use Speech Recognition to generate a prompt")
-                    .attr("id", "record-ai-prompt-button"),
-                ltk.Button("generate code", ltk.proxy(lambda event: self.complete_prompt(event))) # pylint: disable=unnecessary-lambda
-                    .addClass("small-button")
-                    .attr("id", "generate-button"),
-                ltk.Button("Import...", ltk.proxy(lambda event: menu.import_sheet())) # pylint: disable=unnecessary-lambda
-                    .addClass("small-button")
-                    .attr("title", "Load sample data from the web as Pandas DataFrame")
-                    .attr("id", "load-from-web-button"),
-                ltk.HBox().addClass("ai-button-container"),
-            ).addClass("ai-header"),
-            ltk.TextArea(
-            ).attr("id", "ai-prompt").addClass("ai-prompt").attr("placeholder", "Enter your prompt here..."),
-        ).addClass("ai-container").on("resize", ltk.proxy(resize_ai))
+                ltk.Button("▶ Run Task", ltk.proxy(lambda event: self.run_rl_task(event)))
+                    .addClass("rl-btn rl-btn-primary")
+                    .attr("id", "run-task-btn"),
+                ltk.Button("⏹ Stop Fine-Tuning", ltk.proxy(lambda event: self.stop_finetuning(event)))
+                    .addClass("rl-btn rl-btn-danger")
+                    .attr("id", "stop-btn"),
+            ).addClass("rl-button-group"),
+        ).addClass("rl-task-section")
 
-        editor_container = ltk.VBox(
+        # RL Rollout Section - LLM Response
+        rollout_section = ltk.VBox(
             ltk.HBox(
-                ltk.Text().attr("id", "selection")
-                    .text("f(x)")
-                    .css("width", 70),
-                ltk.HBox(
-                    ltk.Text("Packages:"),
-                    ltk.Input("")
-                        .attr("id", "packages")
-                        .css("width", 150)
-                        .on("keyup", ltk.proxy(show_reload_button))
-                        .val(self.model.packages),
-                    ltk.Button("Reload", ltk.proxy(lambda event: self.save_packages(event))) # pylint: disable=unnecessary-lambda
-                        .attr("id", "reload-button")
-                        .css("display", "none"),
-                    ltk.Button("run script", ltk.proxy(lambda event: self.run_current(event))) # pylint: disable=unnecessary-lambda
-                        .addClass("small-button toolbar-button")
-                        .attr("id", "run-button"),
-                ).addClass("packages-container"),
-            ),
+                ltk.Text("Rollout").addClass("rl-section-title"),
+                ltk.Text("LLM Response").addClass("rl-section-subtitle"),
+            ).addClass("rl-rollout-header"),
+            ltk.Div(
+                ltk.Div().attr("id", "rl-rollout-content").addClass("rl-rollout-content")
+            ).addClass("rl-rollout-container"),
+            ltk.HBox(
+                ltk.Text("Status:").addClass("rl-status-label"),
+                ltk.Text("Ready").attr("id", "rl-status").addClass("rl-status-value"),
+            ).addClass("rl-status-bar"),
+        ).addClass("rl-rollout-section")
+
+        # Hidden packages input (keep functionality)
+        hidden_packages = ltk.Input("") \
+            .attr("id", "packages") \
+            .val(self.model.packages) \
+            .addClass("hidden")
+
+        # Hidden editor (keep functionality but not visible)
+        self.editor.addClass("hidden")
+        hidden_editor = ltk.VBox(
+            ltk.Text().attr("id", "selection").addClass("hidden"),
             self.editor,
-        ).addClass("editor-container").on("resize", ltk.proxy(resize_editor))
+            hidden_packages,
+        ).addClass("hidden")
+
+        # Right panel with RL interface
+        right_panel = ltk.VBox(
+            task_section,
+            rollout_section,
+            hidden_editor,
+            console,
+        ).addClass("right-panel rl-panel")
 
         ltk.inject_css(html_maker.make_css(self.model))
         left_panel = ltk.Div(
@@ -999,17 +997,6 @@ class SpreadsheetView():     # pylint: disable=too-many-instance-attributes,too-
                 ltk.window.jQuery(html_maker.make_html(self.model))
             ).attr("id", "sheet-scrollable")
         ).attr("id", "sheet-container")
-
-        editor_and_tabs = ltk.VerticalSplitPane(
-            editor_container,
-            tabs,
-            "editor-and-console",
-        )
-        right_panel = ltk.VerticalSplitPane(
-            ai,
-            editor_and_tabs,
-            "ai-and-editor",
-        ).addClass("right-panel")
 
         if state.mobile():
             ltk.find("#main").prepend(
@@ -1025,11 +1012,10 @@ class SpreadsheetView():     # pylint: disable=too-many-instance-attributes,too-
                     left_panel.css("width", "70%"),
                     right_panel.css("width", "30%"),
                     "sheet-and-editor",
-                ).css("height", "calc(100vh - 51px)")
+                ).css("height", "calc(100vh - 52px)")
             )
         if not ltk.find("#A1").length:
-            raise ValueError("Error: PySheets setup problem, cannot find cell A1")
-        ltk.schedule(editor_and_tabs.layout, "layout editor")
+            raise ValueError("Error: SheetRL setup problem, cannot find cell A1")
         ltk.window.adjustSheetPosition()
         self.create_top()
         ltk.find("body").focus().on("keydown", ltk.proxy(lambda event: self.keydown(event))) # pylint: disable=unnecessary-lambda
@@ -1054,6 +1040,74 @@ class SpreadsheetView():     # pylint: disable=too-many-instance-attributes,too-
 
         if hasattr(ltk.window.navigator, "brave"):
             ltk.find("#record-ai-prompt-button").css("display", "none")
+
+    def run_rl_task(self, event=None):  # pylint: disable=unused-argument
+        """
+        Run the RL task based on the current task input.
+        """
+        task = ltk.find("#rl-task-input").val()
+        if not task:
+            self.update_rl_status("Please enter a task first", "error")
+            return
+        
+        self.update_rl_status("Running...", "running")
+        ltk.find("#run-task-btn").attr("disabled", True)
+        ltk.find("#stop-btn").removeClass("disabled")
+        
+        # Add task to rollout
+        self.append_rollout("task", f"Task: {task}")
+        self.append_rollout("status", "Processing task...")
+        
+        # Here you would integrate with your RL/LLM backend
+        # For now, simulate a response
+        ltk.schedule(lambda: self.simulate_rl_response(task), "rl-response", 1)
+
+    def stop_finetuning(self, event=None):  # pylint: disable=unused-argument
+        """
+        Stop the current fine-tuning/RL task.
+        """
+        self.update_rl_status("Stopped", "stopped")
+        ltk.find("#run-task-btn").attr("disabled", False)
+        ltk.find("#stop-btn").addClass("disabled")
+        self.append_rollout("status", "Task stopped by user.")
+
+    def update_rl_status(self, status, status_type="info"):
+        """
+        Update the RL status display.
+        """
+        status_elem = ltk.find("#rl-status")
+        status_elem.text(status)
+        status_elem.removeClass("status-running status-error status-stopped status-success")
+        status_elem.addClass(f"status-{status_type}")
+
+    def append_rollout(self, msg_type, message):
+        """
+        Append a message to the rollout display.
+        """
+        rollout = ltk.find("#rl-rollout-content")
+        entry = ltk.Div(
+            ltk.Text(message)
+        ).addClass(f"rollout-entry rollout-{msg_type}")
+        rollout.append(entry)
+        # Scroll to bottom
+        rollout_container = ltk.find(".rl-rollout-container")
+        rollout_container.scrollTop(rollout_container.prop("scrollHeight"))
+
+    def clear_rollout(self):
+        """
+        Clear the rollout display.
+        """
+        ltk.find("#rl-rollout-content").empty()
+
+    def simulate_rl_response(self, task):
+        """
+        Simulate an RL/LLM response (placeholder for actual integration).
+        """
+        # This is a placeholder - replace with actual LLM/RL integration
+        response = f"Analyzing task: '{task}'\n\nGenerating actions for the spreadsheet..."
+        self.append_rollout("response", response)
+        self.update_rl_status("Completed", "success")
+        ltk.find("#run-task-btn").attr("disabled", False)
 
     def enter(self, event):
         """ Handle the mouse entering a cell """

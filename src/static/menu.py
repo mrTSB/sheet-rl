@@ -27,16 +27,16 @@ def create_menu():
         - Full Screen: Toggles full screen mode
     
     - Help menu:
-        - About: Opens the PySheets website
+        - About: Opens the SheetRL website
         - Feedback: Opens a feedback form
-        - Discord: Opens the PySheets Discord server
+        - Discord: Opens the SheetRL Discord server
     
     The menu is animated to fade in when it is created.
     """
     def go_home():
         ltk.window.document.location = "/"
 
-    ltk.find(".logo").on("click", ltk.proxy(lambda event: go_home()))
+    ltk.find(".logo-container").on("click", ltk.proxy(lambda event: go_home()))
 
     return ltk.MenuBar([
         create_file_menu(),
@@ -70,7 +70,7 @@ def import_sheet():
     """
 
     if state.UI.editor.get():
-        return ltk.window.alert("Please select an empty cell and press 'import' again.")
+        return ltk.window.alert("Please select an empty cell and press 'Import' again.")
 
     def load_from_web(event): # pylint: disable=unused-argument
         state.UI.set_random_color()
@@ -149,7 +149,7 @@ duckdb.sql(f"{{select}} {{where}}").df()
                         .addClass("import-web-url-input")
                         .attr("id", "import-web-url")
                         .on("input", ltk.proxy(load_from_web))
-                        .attr("placeholder", "Enter a web url..."),
+                        .attr("placeholder", "Enter a web URL..."),
                 ),
                 ltk.HBox(
                     ltk.Div()
@@ -206,13 +206,13 @@ def create_file_menu():
         name = state.SHEET.name.replace(" ", "_").lower()
         dialog = ltk.VBox(
             ltk.Text("""
-                After you download this sheet as a JSON file, you can commit it to github
+                After you download this sheet as a JSON file, you can commit it to GitHub
                 or upload it to Google Drive, Dropbox, or any other cloud storage.
             """),
             ltk.Break(),
             ltk.Text("""
-                After your uploaded file is reachable as a url, you can load it into
-                PySheets as https://pysheets.app/?open=your_url.
+                After your uploaded file is reachable as a URL, you can load it into
+                SheetRL using the open parameter in the URL.
             """),
             ltk.Break(),
             ltk.HBox(
@@ -245,7 +245,7 @@ def create_file_menu():
         ltk.MenuItem("📂", "Open", "Cmd+O", ltk.proxy(go_home)),
         ltk.MenuItem("💾", "Download", "", ltk.proxy(download)),
     ] + ([
-        ltk.MenuItem("📥", "Import ...", "", ltk.proxy(lambda event: import_sheet())),
+        ltk.MenuItem("📥", "Import…", "", ltk.proxy(lambda event: import_sheet())),
         ltk.MenuItem("🗑️", "Delete", "", ltk.proxy(delete_sheet)),
     ] if state.UID else [])
     return ltk.Menu("File", items)
@@ -287,13 +287,51 @@ def create_help_menu():
 
 def new_sheet():
     """
-    Creates a new sheet and saves it to storage, then loads the new sheet.
+    Shows a modal to get the sheet name, then creates and saves the new sheet.
     """
     import models # pylint: disable=import-outside-toplevel
     import storage # pylint: disable=import-outside-toplevel
-    sheet = models.Sheet(uid=ltk.window.crypto.randomUUID())
-    storage.save(sheet)
-    load_doc(sheet.uid, new=True)
+    
+    def create_sheet(event=None):
+        name = ltk.find("#new-sheet-name").val().strip()
+        if not name:
+            name = "Untitled Sheet"
+        ltk.find("#new-sheet-modal").remove()
+        sheet = models.Sheet(uid=ltk.window.crypto.randomUUID(), name=name)
+        storage.save(sheet)
+        load_doc(sheet.uid, new=True)
+    
+    def cancel_create(event=None):
+        ltk.find("#new-sheet-modal").remove()
+    
+    def handle_keydown(event):
+        if event.keyCode == 13:  # Enter key
+            create_sheet()
+        elif event.keyCode == 27:  # Escape key
+            cancel_create()
+    
+    # Create new sheet modal
+    modal = ltk.Div(
+        ltk.Div(
+            ltk.Div(
+                ltk.Text("Create New Sheet").addClass("modal-title"),
+                ltk.Text("Give your sheet a name to get started.").addClass("modal-message"),
+                ltk.Input("")
+                    .attr("id", "new-sheet-name")
+                    .attr("placeholder", "Enter sheet name...")
+                    .attr("autofocus", "true")
+                    .addClass("modal-input")
+                    .on("keydown", ltk.proxy(handle_keydown)),
+                ltk.HBox(
+                    ltk.Button("Cancel", ltk.proxy(cancel_create)).addClass("modal-btn modal-btn-cancel"),
+                    ltk.Button("Create Sheet", ltk.proxy(create_sheet)).addClass("modal-btn modal-btn-primary"),
+                ).addClass("modal-buttons"),
+            ).addClass("modal-content")
+        ).addClass("modal-dialog")
+    ).attr("id", "new-sheet-modal").addClass("sheet-modal")
+    
+    ltk.find("body").append(modal)
+    ltk.schedule(lambda: ltk.find("#new-sheet-name").focus(), "focus-input", 0.1)
 
 
 def load_doc(uid, new=False):

@@ -8,7 +8,7 @@
 <html lang="en">
 
 <head>
-    <title>PySheets</title>
+    <title>SheetRL</title>
     <script>
         addEventListener('py:progress', ({ detail }) => {
             const [action, what] = detail.split(/\s+/);
@@ -18,7 +18,7 @@
     </script>
     <meta charset="UTF-8">
     <meta charset="UTF-8">
-    <meta name="description" content="PySheets">
+    <meta name="description" content="SheetRL - Spreadsheet UI for Python">
     <meta name="keywords" content="Python, PyScript, Spreadsheets, Data Science, Pandas">
     <meta name="author" content="Chris Laffra">
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -308,7 +308,7 @@
                     $("<div>").append(
                         $("<div>")
                             .css("margin", 8)
-                            .text("It looks like PySheets could not load the document. Things you can try:"),
+                            .text("It looks like SheetRL could not load the document. Things you can try:"),
                         $("<ul>")
                             .css("margin", 8)
                             .append(
@@ -583,16 +583,22 @@
 </head>
 <body>
     <div class="header">
-        <div class="logo-container">
-            <img class="logo" src="favicon.ico">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="logo-mark">S</div>
+                <span class="logo-text">Sheet<span class="logo-accent">RL</span></span>
+            </div>
+            <div class="header-divider"></div>
             <div id="menu" class="menu"></div>
         </div>
-        <div id="cell-attributes-container" class="cell-attributes-container"></div>
-        <div id="info" class="info">
-            <input id="title" value={{loading}}>
+        <div class="header-center">
+            <input id="title" value={{loading}} spellcheck="false">
         </div>
-        <div class="column buttons-container"></div>
-        <div class="column user-image-container">
+        <div class="header-right">
+            <div class="header-status" id="header-status">
+                <span class="status-dot"></span>
+                <span class="status-text">Ready</span>
+            </div>
         </div>
     </div>
     <div id="main" class="main" tabindex="0">

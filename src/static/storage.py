@@ -131,7 +131,7 @@ class Sheets():
     """
 
     def __init__(self, db_loaded):
-        self.db = Database("PySheets", DB_VERSION, db_loaded)
+        self.db = Database("SheetRL", DB_VERSION, db_loaded)
         self.deleted = []
 
     def list_sheets(self, found_all_sheets):

@@ -35,7 +35,7 @@ def set_title(title):
         title (str): The title to set for the application window.
     """
     show_message(title)
-    ltk.window.document.title = f"{title} {'- ' if title else ''}PySheets"
+    ltk.window.document.title = f"{title} {'- ' if title else ''}SheetRL"
 
 
 def show_message(message):
@@ -277,10 +277,10 @@ class Console():
                     text = py_error.text()
                     if self.contains_runtime_error(text):
                         ltk.window.alert("\n".join([
-                            "The Python runtime reported a programming error in PySheets.",
+                            "The Python runtime reported a programming error in SheetRL.",
                             "This does not look like a problem with your scripts.",
                             "Please reload the sheet again, adding '&runtime=py' to the URL.",
-                            "This should produce better error messages for PySheets.",
+                            "This should produce better error messages for SheetRL.",
                             "",
                         ]))
                     else:
@@ -443,7 +443,7 @@ def worker_ready(data):
 
 def show_support_message():
     """
-    Displays a message on the console to support the open-source PySheets project.
+    Displays a message on the console to support the open-source SheetRL project.
     """
     action = ltk.Link("https://github.com/PySheets/pysheets",
         ltk.Button("Star", click=lambda event: None)
@@ -452,7 +452,7 @@ def show_support_message():
     )
     console.write(
         "star",
-        "[Github] PySheets is open-source. Give it a star ⭐.",
+        "[GitHub] SheetRL is open-source. Give it a star ⭐.",
         action=action
     )
 
@@ -468,7 +468,7 @@ def check_lastpass():
     if ltk.find("div[data-lastpass-root]").length:
         console.write(
             "lastpass", 
-            "[Error] Lastpass was detected. It slows down PySheets. Please disable it for this page."
+            "[Error] LastPass was detected. It slows down SheetRL. Please disable it for this page."
         )
 
 
